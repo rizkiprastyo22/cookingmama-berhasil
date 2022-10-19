@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.boot.autoconfigure.neo4j.Neo4jProperties;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import com.cookingmama.cookingmamabackend.models.RecipeModel;
 import com.cookingmama.cookingmamabackend.repository.RecipeRepository;
@@ -74,14 +76,14 @@ public class RecipeController {
     }
 
     @GetMapping("/private")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<?> getPrivateRecipes() {
         try {
 //            List<RecipeModel> recipes= RecipeRepository.findAll();
             List<RecipeModel> recipesPrivate = new ArrayList<RecipeModel>();
             RecipeRepository.findByPublikFalse().forEach(recipesPrivate::add);
             if (recipesPrivate.isEmpty()) {
-                String indexString = "{\"Message\":\"You have not created a recipe yet\"}";
+                String indexString = "{\"Message\":\"You have no private recipe\"}";
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode noRecipe = mapper.readTree(indexString);
                 return new ResponseEntity<>(noRecipe, HttpStatus.OK);
@@ -92,8 +94,47 @@ public class RecipeController {
         }
     }
 
+    @GetMapping("/myrecipes/{userid}")
+//    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    public ResponseEntity<?> getMyRecipes(@PathVariable("userid") String userid) {
+        List<RecipeModel> myRecipes = RecipeRepository.findByUserid(userid);
+        if (myRecipes.isEmpty()){
+            try {
+                String indexString = "{\"Message\":\"You have not created a recipe yet\"}";
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode notFound = mapper.readTree(indexString);
+                return new ResponseEntity<>(notFound, HttpStatus.OK);
+            } catch (Exception e) {
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            return new ResponseEntity<>(myRecipes, HttpStatus.OK);
+        }
+//        try {
+//            List<RecipeModel> myRecipes = RecipeRepository.findByUserid(uid);
+
+//            return myRecipes.isPresent() ? new ResponseEntity<>(myRecipes.get(), HttpStatus.OK) : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+//            List<RecipeModel> myRecipes = new ArrayList<RecipeModel>();
+//            RecipeRepository.findByUserid(uid).forEach(myRecipes::add);
+
+//            List<RecipeModel> myRecipes = new ArrayList<RecipeModel>();
+//            RecipeRepository.findByUserid(userid).forEach(myRecipes::add);
+//            System.out.println("masukk");
+//            if (myRecipes.isEmpty()) {
+//                String indexString = "{\"Message\":\"You have not created a recipe yet\"}";
+//                ObjectMapper mapper = new ObjectMapper();
+//                JsonNode noRecipe = mapper.readTree(indexString);
+//                return new ResponseEntity<>(noRecipe, HttpStatus.OK);
+//            }
+//            return new ResponseEntity<>(myRecipes, HttpStatus.OK);
+//        } catch (Exception e) {
+//
+//            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+//        }
+    }
+
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     public ResponseEntity<RecipeModel> getProductById(@PathVariable("id") long id) {
         try {
             Optional<RecipeModel> recipesData = RecipeRepository.findById(id);
@@ -154,7 +195,7 @@ public class RecipeController {
         } else {
             try{
                 RecipeModel recipe = RecipeRepository.save(new RecipeModel(recipeModel.getName(), recipeModel.getIngredients(), recipeModel.getHowto(), recipeModel.getPublik(), recipeModel.getUserid()));
-                return new ResponseEntity<>("Success", HttpStatus.OK);
+                return new ResponseEntity<>(null, HttpStatus.OK);
             } catch (Exception e) {
                 return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
             }
